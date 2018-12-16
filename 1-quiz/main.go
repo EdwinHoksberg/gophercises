@@ -13,11 +13,13 @@ import (
 
 var problemFile string
 var timeLimit int
+var randomizeProblems bool
 
 func init() {
 	// Parse command line flags, use default if not passed
 	flag.StringVar(&problemFile, "csv", "problems.csv", "a csv file with questions and answers")
 	flag.IntVar(&timeLimit, "limit", 30, "the time limit for the quiz in seconds")
+	flag.BoolVar(&randomizeProblems, "shuffle", false, "randomize questions if set to true")
 
 	flag.Parse()
 }
@@ -40,7 +42,19 @@ func main() {
 		log.Fatal(err)
 	}
 
-	total, correct, wrong := len(problems),0,0
+	// Define some variables to be used later
+	total, correct, wrong := len(problems), 0, 0
+
+	// If the user wants to shuffle the questions, do that here
+	if randomizeProblems {
+		// Seed the rng with the current time
+		rand.Seed(time.Now().UnixNano())
+
+		// Shuffle the problems map
+		rand.Shuffle(total, func(i, j int) {
+			problems[i], problems[j] = problems[j], problems[i]
+		})
+	}
 
 	// Create a timer with the defined limit
 	timer := time.NewTimer(time.Duration(timeLimit) * time.Second)
