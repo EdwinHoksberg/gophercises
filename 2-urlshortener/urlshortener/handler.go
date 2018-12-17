@@ -1,12 +1,14 @@
 package urlshortener
 
 import (
+	"database/sql"
 	"encoding/json"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
 
+	_ "github.com/go-sql-driver/mysql"
 	yaml "gopkg.in/yaml.v2"
 )
 
@@ -81,6 +83,39 @@ func JSONFileHandler(jsonFilePath string, fallback http.Handler) (http.HandlerFu
 	for _, value := range parsedYaml {
 		key := value["path"]
 		pathsToUrls[key] = value["url"]
+	}
+
+	return MapHandler(pathsToUrls, fallback), nil
+}
+
+func MYSQLHandler(dsn string, fallback http.Handler) (http.HandlerFunc, error) {
+	// Create a variable to hold the mysql connection
+	db, err := sql.Open("mysql", dsn)
+	if err != nil {
+		return nil, err
+	}
+	// Make sure the correctly close the database connection after we're done
+	defer db.Close()
+
+	// Connect to the database and query all data from the paths table
+	rows, err := db.Query("select `path`, `url` from `paths`")
+	if err != nil {
+		return nil, err
+	}
+	// Close the result reset after we extracted our data
+	defer rows.Close()
+
+	var path, url string
+	pathsToUrls := make(map[string]string)
+
+	// Loop through each result, and assign it to our result map
+	for rows.Next() {
+		err := rows.Scan(&path, &url)
+		if err != nil {
+			return nil, err
+		}
+
+		pathsToUrls[path] = url
 	}
 
 	return MapHandler(pathsToUrls, fallback), nil

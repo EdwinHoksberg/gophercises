@@ -11,11 +11,13 @@ import (
 
 var yamlFilePath string
 var jsonFilePath string
+var mysqlDsn string
 
 func init() {
 	// Parse command line arguments
 	flag.StringVar(&yamlFilePath, "yaml", "paths.yml", "a file that contains paths in yaml format")
 	flag.StringVar(&jsonFilePath, "json", "paths.json", "a file that contains paths in json format")
+	flag.StringVar(&mysqlDsn, "dsn", "root:toor@tcp(127.0.0.1:3306)/urlshortener", "a dsn for the mysql server which tells us how to connect to it")
 
 	flag.Parse()
 }
@@ -42,10 +44,15 @@ func main() {
 		log.Fatal(err)
 	}
 
+	mysqlHandler, err := urlshortener.MYSQLHandler(mysqlDsn, jsonFileHandler)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	fmt.Println("Starting the server on :8080")
 
 	// Start listening...
-	http.ListenAndServe(":8080", jsonFileHandler)
+	http.ListenAndServe(":8080", mysqlHandler)
 }
 
 func defaultMux() *http.ServeMux {
